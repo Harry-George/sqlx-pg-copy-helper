@@ -447,6 +447,7 @@ fn generate_field_tokens(
         ::sqlx_pg_copy_helper::Field {
             sql_type: #type_tokens,
             name: #col_name_str,
+            nullable: #is_option,
             getter_func: #getter_func,
         }
     })
@@ -520,6 +521,7 @@ fn derive_impl(ast: &DeriveInput) -> Result<TokenStream2, syn::Error> {
                             ::sqlx_pg_copy_helper::Field {
                                 sql_type: __nested_field.sql_type,
                                 name: __nested_field.name,
+                                nullable: __nested_field.nullable,
                                 getter_func: ::std::boxed::Box::new(
                                     move |r: &#struct_ident| __nested_getter(&r.#field_ident)
                                 ),

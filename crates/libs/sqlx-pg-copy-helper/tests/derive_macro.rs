@@ -13,7 +13,9 @@
     clippy::expect_used
 )]
 
-use sqlx_pg_copy_helper::{BufferSize, PGCopyTable, PgFlattenable, insert_copy_row_values};
+use sqlx_pg_copy_helper::{
+    BufferSize, PGCopyTable, PgFlattenable, generate_create_table_string, insert_copy_row_values,
+};
 use testcontainers::runners::AsyncRunner;
 use testcontainers_modules::postgres::Postgres as PostgresImage;
 
@@ -283,6 +285,65 @@ fn test_flatten_getters() {
     );
 }
 
+/// Struct from the crate's usage example: renames a field's column via `#[pg_copy(name = ...)]`.
+#[derive(Debug, Clone, PGCopyTable)]
+#[pg_copy(table = "events")]
+struct Event {
+    id: i64,
+    label: Option<String>,
+    #[pg_copy(name = "ts")]
+    ts_tz: chrono::DateTime<chrono::Utc>,
+}
+
+/// Conversion helpers for custom domain types, used by `Reading` below.
+mod my_mod {
+    #[derive(Debug, Clone)]
+    pub struct MyType(pub i64);
+
+    pub fn to_pg_value(value: &MyType) -> i64 {
+        value.0
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct OtherType(pub String);
+
+    pub fn try_to_pg_value(value: &OtherType) -> sqlx_pg_copy_helper::Result<f64> {
+        Ok(value.0.parse::<f64>()?)
+    }
+}
+
+/// Embedded key — no table of its own, used only via flatten.
+#[derive(Debug, Clone, PGCopyTable)]
+#[pg_copy(wrapped)]
+struct ReadingKey {
+    device_id: i64,
+    sensor: String,
+}
+
+/// Directly insertable row exercising every column-mapping feature at once: a plain field, an
+/// explicit `sql_type` override, an `IpNetwork` split across two columns, an infallible `convert`,
+/// a fallible `try_convert`, a `skip`ped field, and a `flatten`ed embedded key.
+#[derive(Debug, Clone, PGCopyTable)]
+#[pg_copy(table = "readings")]
+struct Reading {
+    id: i64,
+    label: Option<String>,
+    ts: chrono::NaiveDateTime,
+    #[pg_copy(sql_type = "FLOAT8")]
+    raw_value: f64,
+    #[pg_copy(name = "net_inet", sql_type = "INET")]
+    #[pg_copy(name = "net_cidr", sql_type = "CIDR")]
+    network: Option<ipnetwork::IpNetwork>,
+    #[pg_copy(sql_type = "INT8", convert = "my_mod::to_pg_value")]
+    custom: my_mod::MyType,
+    #[pg_copy(sql_type = "FLOAT8", try_convert = "my_mod::try_to_pg_value")]
+    other: my_mod::OtherType,
+    #[pg_copy(skip)]
+    internal_flag: bool,
+    #[pg_copy(flatten)]
+    key: ReadingKey,
+}
+
 async fn start_pg<T: PGCopyTable>() -> (impl std::any::Any, sqlx::Pool<sqlx::Postgres>) {
     let container = PostgresImage::default().start().await.unwrap();
 
@@ -510,6 +571,140 @@ async fn test_derive_flatten_insert_and_fetch() {
         .fetch_all(&pool)
         .await
         .unwrap();
+
+    insta::assert_debug_snapshot!(fetched);
+}
+
+#[tokio::test]
+async fn test_event_insert_and_fetch() {
+    let (_container, pool) = start_pg::<Event>().await;
+
+    let schema = generate_create_table_string::<Event>();
+    assert_eq!(
+        "CREATE TABLE IF NOT EXISTS events (id int8 NOT NULL, label varchar, ts timestamptz NOT NULL)",
+        schema
+    );
+
+    let rows = vec![
+        Event {
+            id: 1,
+            label: Some("startup".to_string()),
+            ts_tz: chrono::DateTime::parse_from_rfc3339("2024-01-15T12:00:00Z")
+                .unwrap()
+                .with_timezone(&chrono::Utc),
+        },
+        Event {
+            id: 2,
+            label: None,
+            ts_tz: chrono::DateTime::parse_from_rfc3339("2024-01-15T13:00:00Z")
+                .unwrap()
+                .with_timezone(&chrono::Utc),
+        },
+    ];
+
+    insert_copy_row_values(&pool, rows, BufferSize::Default)
+        .await
+        .unwrap();
+
+    let fetched = sqlx::query("SELECT id, label, ts FROM events ORDER BY id")
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+
+    insta::assert_debug_snapshot!(fetched);
+}
+
+/// Verifies column names/types/order for a row exercising every mapping feature at once.
+#[test]
+fn test_reading_fields() {
+    use Reading as Row;
+
+    assert_eq!(Row::table_name(), "readings");
+    let fields = Row::fields();
+
+    let expected: Vec<(&str, &str)> = vec![
+        ("id", "int8"),
+        ("label", "varchar"),
+        ("ts", "timestamp"),
+        ("raw_value", "float8"),
+        ("net_inet", "inet"),
+        ("net_cidr", "cidr"),
+        ("custom", "int8"),      // MyType → INT8 via convert = "my_mod::to_pg_value"
+        ("other", "float8"),     // OtherType → FLOAT8 via try_convert = "my_mod::try_to_pg_value"
+        ("device_id", "int8"),   // flattened from ReadingKey
+        ("sensor", "varchar"),   // flattened from ReadingKey
+    ];
+    let actual: Vec<(&str, &str)> = fields.iter().map(|f| (f.name, f.sql_type.name())).collect();
+
+    assert_eq!(actual, expected);
+}
+
+#[tokio::test]
+async fn test_reading_insert_and_fetch() {
+    let (_container, pool) = start_pg::<Reading>().await;
+
+    let schema = generate_create_table_string::<Reading>();
+    assert_eq!(
+        schema,
+        "CREATE TABLE IF NOT EXISTS readings (id int8 NOT NULL, label varchar, ts timestamp NOT NULL, \
+         raw_value float8 NOT NULL, net_inet inet, net_cidr cidr, custom int8 NOT NULL, other float8 NOT NULL, \
+         device_id int8 NOT NULL, sensor varchar NOT NULL)"
+    );
+
+    let rows = vec![
+        Reading {
+            id: 1,
+            label: Some("sensor-a".to_string()),
+            ts: chrono::NaiveDate::from_ymd_opt(2024, 1, 15)
+                .unwrap()
+                .and_hms_opt(12, 0, 0)
+                .unwrap(),
+            raw_value: 1.5,
+            network: Some(
+                ipnetwork::IpNetwork::new(
+                    std::net::IpAddr::V4(std::net::Ipv4Addr::new(10, 0, 0, 0)),
+                    8,
+                )
+                .unwrap(),
+            ),
+            custom: my_mod::MyType(42),
+            other: my_mod::OtherType("3.5".to_string()),
+            internal_flag: true,
+            key: ReadingKey {
+                device_id: 100,
+                sensor: "temp".to_string(),
+            },
+        },
+        Reading {
+            id: 2,
+            label: None,
+            ts: chrono::NaiveDate::from_ymd_opt(2024, 1, 15)
+                .unwrap()
+                .and_hms_opt(13, 0, 0)
+                .unwrap(),
+            raw_value: 2.5,
+            network: None,
+            custom: my_mod::MyType(7),
+            other: my_mod::OtherType("-1.25".to_string()),
+            internal_flag: false,
+            key: ReadingKey {
+                device_id: 200,
+                sensor: "humidity".to_string(),
+            },
+        },
+    ];
+
+    insert_copy_row_values(&pool, rows, BufferSize::Default)
+        .await
+        .unwrap();
+
+    let fetched = sqlx::query(
+        "SELECT id, label, ts, raw_value, net_inet, net_cidr, custom, other, device_id, sensor \
+         FROM readings ORDER BY id",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
 
     insta::assert_debug_snapshot!(fetched);
 }

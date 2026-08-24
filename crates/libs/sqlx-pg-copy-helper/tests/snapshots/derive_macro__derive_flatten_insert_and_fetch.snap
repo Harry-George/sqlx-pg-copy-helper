@@ -1,0 +1,18 @@
+---
+source: crates/libs/sqlx-pg-copy-helper/tests/derive_macro.rs
+expression: fetched
+---
+[
+    sqlx_postgres::row::PgRow {
+        "id": 1,
+        "category": "widgets",
+        "subcategory": "small",
+        "score": 9.5,
+    },
+    sqlx_postgres::row::PgRow {
+        "id": 2,
+        "category": "gadgets",
+        "subcategory": NULL,
+        "score": 4.0,
+    },
+]

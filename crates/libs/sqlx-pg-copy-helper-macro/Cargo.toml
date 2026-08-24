@@ -1,0 +1,21 @@
+[package]
+name = "sqlx-pg-copy-helper-macro"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Derive macro backing sqlx-pg-copy-helper's #[derive(PGCopyTable)] support. Not meant to be used directly."
+repository = "https://github.com/Harry-George/sqlx-pg-copy-helper"
+readme = "README.md"
+keywords = ["postgres", "postgresql", "sqlx", "copy", "derive"]
+categories = ["database"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "2", features = ["full"] }
+
+[lints]
+workspace = true

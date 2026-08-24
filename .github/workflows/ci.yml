@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install rustfmt
+        run: rustup component add rustfmt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+  clippy:
+    name: clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clippy
+        run: rustup component add clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Clippy
+        # Scoped to lib + bins: test code has pre-existing unwrap/indexing lint
+        # violations under the workspace's strict `clippy::restriction` lints.
+        run: cargo clippy --workspace --lib --bins --all-features -- -D warnings
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --workspace --all-targets
+      - name: Run tests
+        run: cargo test --workspace --all-features
+        # Integration tests spin up Postgres via testcontainers, which needs
+        # a Docker daemon - already available on GitHub-hosted ubuntu runners.
+
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - name: Build docs
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --workspace --no-deps

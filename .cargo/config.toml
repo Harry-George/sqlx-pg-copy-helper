@@ -1,0 +1,10 @@
+# Taken from https://doc.rust-lang.org/stable/cargo/guide/build-performance.html
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.debugging]
+inherits = "dev"
+debug = true

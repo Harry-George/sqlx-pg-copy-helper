@@ -1,4 +1,4 @@
-# pg_binary_copy
+# sqlx-pg-copy-helper
 
 Workspace for [`sqlx-pg-copy-helper`](crates/libs/sqlx-pg-copy-helper), a crate for fast bulk inserts into
 PostgreSQL using the binary `COPY` protocol, and its supporting proc-macro crate

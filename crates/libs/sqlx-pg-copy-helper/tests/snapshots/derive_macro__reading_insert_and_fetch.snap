@@ -1,0 +1,40 @@
+---
+source: crates/libs/sqlx-pg-copy-helper/tests/derive_macro.rs
+expression: fetched
+---
+[
+    sqlx_postgres::row::PgRow {
+        "id": 1,
+        "label": "sensor-a",
+        "ts": 2024-01-15T12:00:00,
+        "raw_value": 1.5,
+        "net_inet": V4(
+            Ipv4Network {
+                addr: 10.0.0.0,
+                prefix: 8,
+            },
+        ),
+        "net_cidr": V4(
+            Ipv4Network {
+                addr: 10.0.0.0,
+                prefix: 8,
+            },
+        ),
+        "custom": 42,
+        "other": 3.5,
+        "device_id": 100,
+        "sensor": "temp",
+    },
+    sqlx_postgres::row::PgRow {
+        "id": 2,
+        "label": NULL,
+        "ts": 2024-01-15T13:00:00,
+        "raw_value": 2.5,
+        "net_inet": NULL,
+        "net_cidr": NULL,
+        "custom": 7,
+        "other": -1.25,
+        "device_id": 200,
+        "sensor": "humidity",
+    },
+]

@@ -1,6 +1,6 @@
 [package]
 name = "sqlx-pg-copy-helper"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license = "MIT"
 description = "Fast bulk inserts into PostgreSQL via the binary COPY protocol, driven by a #[derive(PGCopyTable)] macro on top of sqlx."
@@ -11,7 +11,7 @@ categories = ["database"]
 
 [dependencies]
 anyhow = "1.0.102"
-sqlx-pg-copy-helper-macro = { path = "../sqlx-pg-copy-helper-macro", version = "0.1.0" }
+sqlx-pg-copy-helper-macro = { path = "../sqlx-pg-copy-helper-macro", version = "0.1.1" }
 sqlx = { version = "0.9.0", features = ["runtime-tokio", "tls-native-tls", "macros", "chrono", "postgres", "ipnetwork"] }
 tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-cidr-0_3"] }
 bytes = "1"

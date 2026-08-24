@@ -1,6 +1,6 @@
 [package]
 name = "sqlx-pg-copy-helper-macro"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license = "MIT"
 description = "Derive macro backing sqlx-pg-copy-helper's #[derive(PGCopyTable)] support. Not meant to be used directly."

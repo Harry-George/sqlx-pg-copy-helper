@@ -629,10 +629,10 @@ fn test_reading_fields() {
         ("raw_value", "float8"),
         ("net_inet", "inet"),
         ("net_cidr", "cidr"),
-        ("custom", "int8"),      // MyType → INT8 via convert = "my_mod::to_pg_value"
-        ("other", "float8"),     // OtherType → FLOAT8 via try_convert = "my_mod::try_to_pg_value"
-        ("device_id", "int8"),   // flattened from ReadingKey
-        ("sensor", "varchar"),   // flattened from ReadingKey
+        ("custom", "int8"),    // MyType → INT8 via convert = "my_mod::to_pg_value"
+        ("other", "float8"),   // OtherType → FLOAT8 via try_convert = "my_mod::try_to_pg_value"
+        ("device_id", "int8"), // flattened from ReadingKey
+        ("sensor", "varchar"), // flattened from ReadingKey
     ];
     let actual: Vec<(&str, &str)> = fields.iter().map(|f| (f.name, f.sql_type.name())).collect();
 

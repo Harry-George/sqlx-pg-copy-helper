@@ -119,7 +119,8 @@ fn write_field<T: ToSql + ?Sized>(
     Ok(())
 }
 
-/// Helper function that will give you the create if not exists the table for the given PGCopyTable
+/// Helper function that will give you the create if not exists the table for the given `PGCopyTable`
+#[must_use]
 pub fn generate_create_table_string<T: PGCopyTable>() -> String {
     let cols = T::fields()
         .iter()
@@ -250,7 +251,9 @@ mod tests {
             .await
             .expect("Failed to connect to database");
 
-        sqlx::query(sqlx::AssertSqlSafe(generate_create_table_string::<TestRow>()))
+        sqlx::query(sqlx::AssertSqlSafe(
+            generate_create_table_string::<TestRow>(),
+        ))
         .execute(&pool)
         .await
         .unwrap();
@@ -382,6 +385,4 @@ mod tests {
 
         insta::assert_debug_snapshot!(fetched);
     }
-
-
 }

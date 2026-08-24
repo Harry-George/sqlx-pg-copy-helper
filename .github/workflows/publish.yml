@@ -1,0 +1,86 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump level"
+        required: true
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    name: bump, tag & publish
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # a plain GITHUB_TOKEN can't push past main branch protection;
+          # supply a PAT with repo write access if main is protected.
+          token: ${{ secrets.RELEASE_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-edit
+
+      - name: Bump workspace versions
+        run: cargo set-version --bump ${{ inputs.bump }} --workspace
+
+      - name: Refresh lockfile
+        run: cargo check --workspace --all-targets
+
+      - name: Read new version
+        id: version
+        run: |
+          version=$(cargo metadata --no-deps --format-version=1 \
+            | jq -r '.packages[] | select(.name == "sqlx-pg-copy-helper") | .version')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add crates/libs/sqlx-pg-copy-helper/Cargo.toml \
+                  crates/libs/sqlx-pg-copy-helper-macro/Cargo.toml \
+                  Cargo.lock
+          git commit -m "chore(release): v${{ steps.version.outputs.version }}"
+          git tag "v${{ steps.version.outputs.version }}"
+          git push origin HEAD:main
+          git push origin "v${{ steps.version.outputs.version }}"
+
+      - name: Publish macro crate
+        working-directory: crates/libs/sqlx-pg-copy-helper-macro
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish
+
+      - name: Publish helper crate
+        working-directory: crates/libs/sqlx-pg-copy-helper
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          # crates.io index propagation can lag a few seconds behind the
+          # macro crate upload above, so retry until it resolves.
+          for i in $(seq 1 10); do
+            if cargo publish; then
+              exit 0
+            fi
+            echo "Publish failed (attempt $i/10), retrying in 15s..."
+            sleep 15
+          done
+          exit 1

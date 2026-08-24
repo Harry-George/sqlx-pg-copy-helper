@@ -2417,7 +2417,7 @@ dependencies = [
 
 [[package]]
 name = "sqlx-pg-copy-helper"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -2436,7 +2436,7 @@ dependencies = [
 
 [[package]]
 name = "sqlx-pg-copy-helper-macro"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proc-macro2",
  "quote",

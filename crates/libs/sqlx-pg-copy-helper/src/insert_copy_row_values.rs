@@ -119,6 +119,19 @@ fn write_field<T: ToSql + ?Sized>(
     Ok(())
 }
 
+/// Helper function that will give you the create if not exists the table for the given PGCopyTable
+pub fn generate_create_table_string<T: PGCopyTable>() -> String {
+    let cols = T::fields()
+        .iter()
+        .map(|f| {
+            let not_null = if f.nullable { "" } else { " NOT NULL" };
+            format!("{} {}{not_null}", f.name, f.sql_type.name())
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("CREATE TABLE IF NOT EXISTS {} ({cols})", T::table_name())
+}
+
 #[cfg(test)]
 #[allow(
     clippy::arithmetic_side_effects,
@@ -153,41 +166,49 @@ mod tests {
                 Field {
                     sql_type: Type::INT8,
                     name: "id",
+                    nullable: false,
                     getter_func: Box::new(|r| Ok(FieldValue::Borrowed(&r.id))),
                 },
                 Field {
                     sql_type: Type::TEXT,
                     name: "label",
+                    nullable: true,
                     getter_func: Box::new(|r| Ok(FieldValue::Borrowed(&r.label))),
                 },
                 Field {
                     sql_type: Type::FLOAT8,
                     name: "value",
+                    nullable: false,
                     getter_func: Box::new(|r| Ok(FieldValue::Borrowed(&r.value))),
                 },
                 Field {
                     sql_type: Type::TIMESTAMP,
                     name: "ts",
+                    nullable: false,
                     getter_func: Box::new(|r| Ok(FieldValue::Borrowed(&r.ts))),
                 },
                 Field {
                     sql_type: Type::TIMESTAMPTZ,
                     name: "ts_tz",
+                    nullable: false,
                     getter_func: Box::new(|r| Ok(FieldValue::Borrowed(&r.ts_tz))),
                 },
                 Field {
                     sql_type: Type::INET,
                     name: "inet",
+                    nullable: true,
                     getter_func: Box::new(|r| Ok(FieldValue::Borrowed(&r.inet))),
                 },
                 Field {
                     sql_type: Type::CIDR,
                     name: "cidr",
+                    nullable: true,
                     getter_func: Box::new(|r| Ok(FieldValue::Borrowed(&r.cidr))),
                 },
                 Field {
                     sql_type: Type::INET,
                     name: "sqlx_network_inet",
+                    nullable: true,
                     getter_func: Box::new(|r| {
                         Ok(match r.sqlx_network {
                             Some(network) => {
@@ -200,6 +221,7 @@ mod tests {
                 Field {
                     sql_type: Type::CIDR,
                     name: "sqlx_network_cidr",
+                    nullable: true,
                     getter_func: Box::new(|r| {
                         Ok(match r.sqlx_network {
                             Some(network) => {
@@ -228,15 +250,7 @@ mod tests {
             .await
             .expect("Failed to connect to database");
 
-        let cols = TestRow::fields()
-            .iter()
-            .map(|f| format!("{} {}", f.name, f.sql_type.name()))
-            .collect::<Vec<_>>()
-            .join(", ");
-        sqlx::query(sqlx::AssertSqlSafe(format!(
-            "CREATE TABLE IF NOT EXISTS {} ({cols})",
-            TestRow::table_name()
-        )))
+        sqlx::query(sqlx::AssertSqlSafe(generate_create_table_string::<TestRow>()))
         .execute(&pool)
         .await
         .unwrap();
@@ -368,4 +382,6 @@ mod tests {
 
         insta::assert_debug_snapshot!(fetched);
     }
+
+
 }

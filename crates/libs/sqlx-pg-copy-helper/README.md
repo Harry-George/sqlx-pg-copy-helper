@@ -10,8 +10,10 @@ data into Postgres from an application.
 
 ## Example
 
-```rust
-use sqlx_pg_copy_helper::{PGCopyTable, BufferSize, insert_copy_row_values};
+```rust,ignore
+use sqlx_pg_copy_helper::{
+    PGCopyTable, BufferSize, generate_create_table_string, insert_copy_row_values,
+};
 
 #[derive(Debug, Clone, PGCopyTable)]
 #[pg_copy(table = "events")]
@@ -28,7 +30,24 @@ async fn insert(pool: &sqlx::PgPool, rows: Vec<Event>) -> anyhow::Result<()> {
 ```
 
 `#[derive(PGCopyTable)]` inspects each field, infers its `PostgreSQL` column type, and generates
-the column list and per-field getters used to serialize the binary COPY stream. 
+the column list and per-field getters used to serialize the binary COPY stream.
+
+There is an optional helper function for creating the table schema, allowing you to do
+
+```rust
+sqlx::query(sqlx::AssertSqlSafe(generate_create_table_string::<Event>()))
+        .execute(pool)
+        .await
+        .unwrap();
+```
+
+This would give you the table
+
+```sql
+CREATE TABLE IF NOT EXISTS events (id int8 NOT NULL, label varchar, ts timestamptz NOT NULL)
+```
+
+This can also be used to see what sql fields the derived copy is going to use.
 
 # Attributes
 
@@ -95,6 +114,22 @@ struct Reading {
     #[pg_copy(flatten)]
     key: ReadingKey,
 }
+```
+
+Passing through `generate_create_table_string::<Reading>()` would give you
+
+```sql
+CREATE TABLE IF NOT EXISTS readings (
+    id int8 NOT NULL,
+    label varchar,
+    ts timestamp NOT NULL,
+    raw_value float8 NOT NULL,
+    net_inet inet,
+    net_cidr cidr,
+    custom int8 NOT NULL,
+    other float8 NOT NULL,
+    device_id int8 NOT NULL,
+    sensor varchar NOT NULL)
 ```
 
 ## Status

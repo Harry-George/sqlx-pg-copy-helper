@@ -32,6 +32,8 @@ pub struct Field<T> {
     pub sql_type: Type,
     /// The name of the field
     pub name: &'static str,
+    /// Whether the column may contain `NULL` (i.e. the Rust field is `Option<_>`)
+    pub nullable: bool,
     /// A function to get the value of the field from the row
     pub getter_func: GetterFunc<T>,
 }

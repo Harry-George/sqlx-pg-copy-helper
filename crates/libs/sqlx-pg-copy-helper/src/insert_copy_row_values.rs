@@ -132,11 +132,8 @@ mod tests {
     use crate::PgFlattenable as _;
     use crate::field::FieldValue;
     use chrono::Timelike;
-    use testcontainers::GenericImage;
-    use testcontainers::Healthcheck;
-    use testcontainers::ImageExt;
-    use testcontainers::core::wait::HealthWaitStrategy;
-    use testcontainers::runners::AsyncRunner;
+    use testcontainers_modules::postgres::Postgres as PostgresImage;
+    use testcontainers_modules::testcontainers::runners::AsyncRunner;
 
     #[derive(Debug, Clone, PartialEq)]
     struct TestRow {
@@ -223,42 +220,10 @@ mod tests {
     }
 
     async fn start_pg() -> (impl std::any::Any, sqlx::Pool<Postgres>) {
-        let container = GenericImage::new("artifacts-docker.adapdix.dev/sa/edge_db", "2025.4.0")
-            .with_wait_for(testcontainers::core::WaitFor::Healthcheck(
-                HealthWaitStrategy::new(),
-            ))
-            .with_exposed_port(testcontainers::core::ContainerPort::Tcp(5432))
-            .with_env_var("EIDB_EDGISTORE_PRELOAD", "true")
-            .with_env_var("EIDB_EXTRA_ARGS", "edgistar_launcher.delay='5'")
-            .with_shm_size(8 * 1024 * 1024 * 1024)
-            .with_ulimit("nofile", 1024 * 1024, Some(1024 * 1024))
-            .with_health_check(
-                Healthcheck::cmd(vec![
-                    "jo_isready".to_string(),
-                    "-U".to_string(),
-                    "justone".to_string(),
-                    "-d".to_string(),
-                    "justonedb".to_string(),
-                ])
-                .with_interval(Some(std::time::Duration::from_secs(1)))
-                .with_retries(Some(300)),
-            )
-            .start()
-            .await
-            .unwrap();
+        let container = PostgresImage::default().start().await.unwrap();
 
         let port = container.get_host_port_ipv4(5432).await.unwrap();
-        let connection_string = format!("postgres://justone:justone@127.0.0.1:{port}/justonedb");
-        let pool = sqlx::PgPool::connect(&connection_string)
-            .await
-            .expect("Failed to connect to database");
-
-        sqlx::query("CREATE DATABASE test_db;")
-            .execute(&pool)
-            .await
-            .unwrap();
-
-        let connection_string = format!("postgres://justone:justone@127.0.0.1:{port}/test_db");
+        let connection_string = format!("postgres://postgres:postgres@127.0.0.1:{port}/postgres");
         let pool = sqlx::PgPool::connect(&connection_string)
             .await
             .expect("Failed to connect to database");

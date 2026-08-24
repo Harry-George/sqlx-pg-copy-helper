@@ -1,0 +1,5 @@
+---
+source: crates/libs/sqlx-pg-copy-helper/src/insert_copy_row_values.rs
+expression: fetched
+---
+[]

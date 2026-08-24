@@ -1,0 +1,69 @@
+---
+source: crates/libs/sqlx-pg-copy-helper/src/insert_copy_row_values.rs
+expression: fetched
+---
+[
+    sqlx_postgres::row::PgRow {
+        "id": 1,
+        "label": "first",
+        "value": 1.5,
+        "ts": 2024-01-15T12:00:00,
+        "ts_tz": 2024-01-15T12:00:00Z,
+        "inet": V4(
+            Ipv4Network {
+                addr: 192.168.0.1,
+                prefix: 32,
+            },
+        ),
+        "cidr": V4(
+            Ipv4Network {
+                addr: 192.168.0.0,
+                prefix: 24,
+            },
+        ),
+        "sqlx_network_inet": V4(
+            Ipv4Network {
+                addr: 192.168.255.255,
+                prefix: 32,
+            },
+        ),
+        "sqlx_network_cidr": V4(
+            Ipv4Network {
+                addr: 192.168.255.255,
+                prefix: 32,
+            },
+        ),
+    },
+    sqlx_postgres::row::PgRow {
+        "id": 2,
+        "label": NULL,
+        "value": 2.5,
+        "ts": 2024-01-15T13:00:00,
+        "ts_tz": 2024-01-15T13:00:00Z,
+        "inet": NULL,
+        "cidr": NULL,
+        "sqlx_network_inet": NULL,
+        "sqlx_network_cidr": NULL,
+    },
+    sqlx_postgres::row::PgRow {
+        "id": 3,
+        "label": "I am a really really really long string that is over the size of 256 to make sure that endianess is not a problem for byte ordering;I am a really really really long string that is over the size of 256 to make sure that endianess is not a problem for byte ordering;I am a really really really long string that is over the size of 256 to make sure that endianess is not a problem for byte ordering;I am a really really really long string that is over the size of 256 to make sure that endianess is not a problem for byte ordering",
+        "value": 3.5,
+        "ts": 2024-01-15T14:00:00,
+        "ts_tz": 2024-01-15T14:00:00Z,
+        "inet": NULL,
+        "cidr": NULL,
+        "sqlx_network_inet": V4(
+            Ipv4Network {
+                addr: 192.168.255.0,
+                prefix: 24,
+            },
+        ),
+        "sqlx_network_cidr": V4(
+            Ipv4Network {
+                addr: 192.168.255.0,
+                prefix: 24,
+            },
+        ),
+    },
+]

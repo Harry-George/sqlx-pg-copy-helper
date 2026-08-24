@@ -1,0 +1,79 @@
+[workspace]
+members = [
+    "crates/libs/sqlx-pg-copy-helper",
+    "crates/libs/sqlx-pg-copy-helper-macro",
+]
+resolver = "2"
+
+# see - https://vorner.github.io/2018/07/22/dont_panic.html
+[profile.dev]
+panic = 'abort'
+
+# see - https://vorner.github.io/2018/07/22/dont_panic.html
+[profile.release]
+panic = 'abort'
+
+[profile.bench]
+
+[profile.test]
+
+[workspace.lints.rust]
+# This is a warning by default, this makes it an error as opposed to a warning
+unused = "allow"
+
+# https://doc.rust-lang.org/clippy/
+[workspace.lints.clippy]
+# note: "deny" means enabled, "allow" means disabled
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+cargo = { level = "deny", priority = -1 }
+
+### Restriction checks ###
+# you are not supposed to use the restriction lints as a group, so
+# we add them all here for now, from
+# https://github.com/rust-lang/rfcs/blob/master/text/2476-clippy-uno.md#lint-audit-and-categories
+# These are known to be potentially buggy, so we may have to remove some as we go on
+arithmetic_side_effects = "deny"
+shadow_unrelated = "deny"
+shadow_same = "deny"
+clone_on_ref_ptr = "deny"
+indexing_slicing = "deny"
+float_arithmetic = "deny"
+else_if_without_else = "deny"
+missing_docs_in_private_items = "deny"
+use_debug = "deny"
+mem_forget = "deny"
+unimplemented = "deny"
+print_stdout = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+multiple_inherent_impl = "deny"
+decimal_literal_representation = "deny"
+float_cmp_const = "deny"
+
+### Allowed exceptions ###
+# Allows macros with useful names like static_mock_free_func macro
+module_name_repetitions = "allow"
+# It's really nice to be able to change a construction of a variable into a multi-line statement
+shadow_reuse = "allow"
+# Having a struct with bools in is fine
+struct_excessive_bools = "allow"
+# This is about making sure you can use your public functions with different hash functions, but it
+# makes the code look a bit messy and we don't need it as we can easily change the code if needed.
+implicit_hasher = "allow"
+# We now can update this using the cargo update command so we don't have to manually maintain it
+multiple_crate_versions = "allow"
+# Its just a bit of a pain as commenting it will be prone to error, the fact that it can error should be enough
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+
+### Buggy exceptions (maybe use if they are fixed) ###
+# Failed on my test code, I had an unused variable, if I called it mock_sleep it would complain unused,
+# if I called it _mock_sleep it would complain about the underscore and say it was used, so disabling this
+# for now
+used_underscore_binding = "allow"
+
+
+
+### Clippy Config ###
+# Note: The config is inside the clippy.toml file

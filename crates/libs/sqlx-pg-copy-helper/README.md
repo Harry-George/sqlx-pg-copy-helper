@@ -25,21 +25,18 @@ struct Event {
 }
 
 async fn insert(pool: &sqlx::PgPool, rows: Vec<Event>) -> anyhow::Result<()> {
+    // Create the schema if its not already there
+    sqlx::query(sqlx::AssertSqlSafe(generate_create_table_string::<Event>()))
+            .execute(pool)
+            .await
+            .unwrap();
+
     insert_copy_row_values(pool, rows, BufferSize::Default).await
 }
 ```
 
 `#[derive(PGCopyTable)]` inspects each field, infers its `PostgreSQL` column type, and generates
 the column list and per-field getters used to serialize the binary COPY stream.
-
-There is an optional helper function for creating the table schema, allowing you to do
-
-```rust
-sqlx::query(sqlx::AssertSqlSafe(generate_create_table_string::<Event>()))
-        .execute(pool)
-        .await
-        .unwrap();
-```
 
 This would give you the table
 

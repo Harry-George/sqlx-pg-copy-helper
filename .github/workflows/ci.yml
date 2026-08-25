@@ -65,3 +65,17 @@ jobs:
       - uses: rustsec/audit-check@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  semver-checks:
+    name: semver-checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - name: Check semver
+        # Advisory only: versions here aren't bumped until the release
+        # workflow runs, so a genuine breaking-change PR would otherwise
+        # always show red. The real gate is in publish.yml, run after the
+        # version bump, where it can confirm the chosen bump level covers it.
+        continue-on-error: true
+        uses: obi1kenobi/cargo-semver-checks-action@v2

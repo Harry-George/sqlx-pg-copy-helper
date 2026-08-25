@@ -36,13 +36,18 @@ jobs:
 
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-edit
+          tool: cargo-edit,cargo-semver-checks
 
       - name: Bump workspace versions
         run: cargo set-version --bump ${{ inputs.bump }} --workspace
 
       - name: Refresh lockfile
         run: cargo check --workspace --all-targets
+
+      - name: Check chosen bump covers API changes
+        # Runs after the bump so the workspace's declared version is the new
+        # one; fails if the actual API diff needs a bigger bump than ${{ inputs.bump }}.
+        run: cargo semver-checks check-release --workspace
 
       - name: Read new version
         id: version
